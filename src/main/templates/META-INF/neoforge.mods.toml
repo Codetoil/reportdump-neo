@@ -1,0 +1,33 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "${mod_license}"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${mod_version}"
+displayName = "${mod_name}"
+description = '''Runs Minecraft's data reports with every installed mod loaded, and dumps the effective server data.'''
+
+[[dependencies.${mod_id}]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+# Built against NeoForge ${neo_version}; any 26.1.2 build works (All The Mods 11 runs 26.1.2.109).
+[[dependencies.${mod_id}]]
+modId = "neoforge"
+type = "required"
+versionRange = "[26.1.2,)"
+ordering = "NONE"
+side = "BOTH"
+
+# Optional, but if installed it must be in range. Built against ${kubejs_version}; accept any KubeJS 8
+# or newer, so packs on an older 8.x (All The Mods 11 ships 26.1.2-8.0.6) still load this mod.
+[[dependencies.${mod_id}]]
+modId = "kubejs"
+type = "optional"
+versionRange = "[26.1.2-8,)"
+ordering = "AFTER"
+side = "BOTH"

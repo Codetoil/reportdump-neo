@@ -1,0 +1,167 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.148'
+    id 'idea'
+}
+
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+version = mod_version
+group = mod_group_id
+
+sourceSets.main.resources {
+    srcDir('src/generated/resources')
+
+    exclude("src/generated/**/.cache")
+}
+
+repositories {
+    maven {
+        url "https://maven.latvian.dev/releases"
+        content {
+            includeGroup "dev.latvian.mods"
+            includeGroup "dev.latvian.apps"
+        }
+    }
+
+    maven {
+        url 'https://jitpack.io'
+        content {
+            includeGroup "com.github.rtyley"
+        }
+    }
+}
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        gameTestServer {
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        // Data generator with the whole All The Mods 11 pack loaded; output in <atm11_datagen_dir>/generated.
+        data {
+            serverData()
+            gameDirectory = file(project.atm11_datagen_dir)
+            programArguments.addAll '--mod', project.mod_id, '--output', file("${project.atm11_datagen_dir}/generated").absolutePath
+            systemProperty 'reportdump.rootsFile', file('roots.txt').absolutePath
+            jvmArgument '-Xmx6G'
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+	// KubeJS is optional: compile against it but don't publish a dependency on it or use it in runs (unless otherwise included in the modpack)
+	compileOnly("dev.latvian.mods:kubejs-neoforge:$kubejs_version")
+	interfaceInjectionData("dev.latvian.mods:kubejs-neoforge:$kubejs_version")
+}
+
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            kubejs_version         : kubejs_version,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+// Fills the runData game folder from the pack without ever writing to the pack: links each mod jar,
+// and replaces config, defaultconfigs and kubejs with fresh copies (configs get rewritten on load).
+var prepareDatagenRun = tasks.register("prepareDatagenRun") {
+    description = 'Sets up the All The Mods 11 game folder for runData.'
+    var pack = file(project.atm11_pack_dir).toPath()
+    var work = file(project.atm11_datagen_dir).toPath()
+    doLast {
+        var mods = work.resolve('mods')
+        java.nio.file.Files.createDirectories(mods)
+        mods.toFile().listFiles().each { if (java.nio.file.Files.isSymbolicLink(it.toPath())) it.delete() }
+        pack.resolve('mods').toFile().listFiles().findAll { it.name.endsWith('.jar') }.each {
+            java.nio.file.Files.createSymbolicLink(mods.resolve(it.name), it.toPath())
+        }
+        ['config', 'defaultconfigs', 'kubejs'].each { name ->
+            var from = pack.resolve(name)
+            var to = work.resolve(name)
+            if (java.nio.file.Files.exists(to)) {
+                to.toFile().deleteDir()
+            }
+            java.nio.file.Files.walk(from).withCloseable { paths ->
+                paths.each { java.nio.file.Files.copy(it, to.resolve(from.relativize(it).toString())) }
+            }
+        }
+    }
+}
+tasks.matching { it.name == 'runData' }.configureEach {
+    dependsOn prepareDatagenRun
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8' 
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
