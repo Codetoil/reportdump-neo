@@ -8,6 +8,9 @@ version = "${mod_version}"
 displayName = "${mod_name}"
 description = '''Runs Minecraft's data reports with every installed mod loaded, and dumps the effective server data.'''
 
+[[mixins]]
+config="${mod_id}.mixins.json"
+
 [[dependencies.${mod_id}]]
 modId = "minecraft"
 type = "required"

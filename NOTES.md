@@ -79,10 +79,31 @@ Findings for datapacks:
 - `--reports` with mods only reaches mods that add providers; hence this mod.
 - Data runs skip config loading and never reach common setup or load-complete.
 
-## Not covered yet
+## KubeJS and the server data reload (2026-10-23 14:14)
 
-KubeJS's runtime changes (server scripts: 652 recipes added and 137 removed at server start; tag and loot events;
-its virtual data packs), world-level packs (`neovitae_materials`, T&T waystones patch, potionsmaster
-recipes), biome/structure modifiers applied in code. KubeJS 8.0.6 hooks in through mixins on
-`MultiPackResourceManager`, `ReloadableServerResources`, `RecipeManager`, `TagLoader` and `WorldLoader`;
-running `ReloadableServerResources.loadResources` (what `WorldLoader` does next) is the likely way in.
+With KubeJS installed the data is read the way a KubeJS server reads it:
+- `PlatformWrapperMixin` makes `PlatformWrapper.isGeneratingData()` return false. KubeJS otherwise skips its
+  startup and server scripts in data runs ("Skipping KubeJS script loading (DataGen)"). The mixin
+  config's plugin (`ReportDumpMixinPlugin`) skips mixins whose target class is missing, so KubeJS stays optional.
+- `KubeJSCompat.bindServerResources` = KubeJS's `WorldLoaderPackConfigMixin`: adds its 6 packs (kubejs/data,
+  script-generated data, script-registered registry entries) and loads the server scripts. KubeJS's tag
+  and recipe mixins only act on a resource manager made this way.
+- `FullRegistries` loads registries from it (setting KubeJS's `RegistryAccessContainer.current` like its
+  `WorldLoaderMixin`), then `loadServerResources` runs `ReloadableServerResources.loadResources` +
+  `updateComponentsAndStaticRegistryTags`, as `WorldLoader` does. KubeJS's recipe event runs there.
+- `LoadedData` writes what that reload produced to `loaded/data/` (recipes, loot tables, predicates, item
+  modifiers, advancements, re-encoded) and `reports/loaded_data.json` (ids added in code, files not loaded,
+  encode failures).
+
+Results in runDataATM11, compared with the run before:
+- KubeJS logs 17/17 startup and 151/151 server scripts, and "Added 652 recipes, removed 137 recipes,
+  modified 7 recipes" (the same as the pack's own server log).
+- Registries gained 101 `kubejs:` items, 7 blocks, 6 fluids and 3 fluid types. 130 static tags changed;
+  biome, feature and biome-modifier registries changed. Packs 308 → 314; data files 127,232 → 128,292.
+- Reload: 37,116 recipes (1,145 not from files, 3,693 files not loaded), 31,790 loot tables, 1,763
+  advancements. The pack's Utilitarian config disables recipe advancements, hence 22,878 unloaded
+  `advancement/recipes/` files. 377 Productive Bees recipes load but can't be re-encoded (their codec
+  throws `NullPointerException` on `beeType`).
+
+Still not covered: world-level packs (`neovitae_materials`, T&T waystones patch, potionsmaster recipes),
+NeoForge global loot modifiers and data maps as loaded, functions.

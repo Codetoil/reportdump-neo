@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "io.codetoil.reportdump.neo.mixins",
+  "compatibilityLevel": "JAVA_25",
+  "plugin": "io.codetoil.reportdump.neo.ReportDumpMixinPlugin",
+  "mixins": [
+    "PlatformWrapperMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}
