@@ -40,6 +40,6 @@ record FullRegistries(HolderLookup.Provider lookup, RegistryAccess.Frozen access
         // Bind the static registries' tags, as the server does after its first data load
         // (ReloadableServerResources.updateComponentsAndStaticRegistryTags); until then they are unbound.
         staticTags.forEach(Registry.PendingTags::apply);
-        return new FullRegistries(access, access, new ConditionContext(staticTags, access, FeatureFlags.DEFAULT_FLAGS));
+        return new FullRegistries(access, access, new ConditionContext(staticTags, access, access, FeatureFlags.DEFAULT_FLAGS));
     }
 }
