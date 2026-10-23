@@ -1,11 +1,12 @@
-# Reportdump Neo: notes (2026-10-23 12:50 EDT)
+# Reportdump Neo: notes (2026-10-23 15:00 EDT)
 
 Goal: Minecraft's data reports **with all of All The Mods 11 loaded**, plus the data the game
 actually loads, to vibe-code datapacks for the pack. Every report succeeds.
 
 ## The pack
 
-- `~/IdeaProjects/AllTheMods11InDev/run` (inside a NeoForge 26.1.2 ModDevGradle MDK).
+- `~/datapacks/allthemods11`: the pack's own server install (started with its `startserver.sh`). It
+  used to live in a NeoForge MDK's `run/`; that MDK is now the blank `~/IdeaProjects/NeoForge-26.1.2-blank`.
 - MC 26.1.2, NeoForge 26.1.2.**109**, data pack format **101.1**, 280 mods, KubeJS 8.0.6.
 - This project builds against NeoForge 26.1.2.**122** (kept on purpose); `mods.toml` accepts any 26.1.2 build.
 - Decompiled Minecraft+NeoForge sources: `build/moddev/artifacts/minecraft-patched-26.1.2.122-sources.jar`;
@@ -19,8 +20,12 @@ folder names to walk):
   `run/`, output `run/generated`. About 5 s; 154 registries, 1,168 blocks, 102 commands (13:18 run).
 - `./gradlew runDataATM11`: the whole All The Mods 11 pack, about 30 s, 6 GB heap max.
   1. `prepareDataATM11` fills the game folder `atm11_datagen_dir` (gradle.properties, default
-     `../AllTheMods11InDev/datagen`, git-ignored there): links every jar from `atm11_pack_dir/mods`, and
-     replaces `config`, `defaultconfigs`, `kubejs` with fresh copies. The pack folder is only read.
+     `../../datapacks/allthemods11/datagen`, i.e. `datagen/` inside the pack): links every jar from
+     `atm11_pack_dir/mods`, and replaces `config`, `defaultconfigs`, `kubejs` with fresh copies. Apart
+     from `datagen/` the pack folder is only read. The run's game folder is `datagen/`, so its logs go
+     to `datagen/logs` and never rotate a running server's `logs/latest.log`.
+     The pack doesn't need this mod's jar in its `mods/`; with it there, the jar would be linked
+     in next to the dev build of the same mod.
   2. Output in `<datagen>/generated`.
 
 `mods.toml` is generated from `src/main/templates` with the values in `gradle.properties`.
