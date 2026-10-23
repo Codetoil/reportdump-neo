@@ -13,27 +13,36 @@ actually loads, to vibe-code datapacks for the pack. Every report succeeds.
 
 ## Running it
 
-`./gradlew runData` (about 35 s, 6 GB heap max):
-1. `prepareDatagenRun` fills the game folder `atm11_datagen_dir` (gradle.properties, default
-   `../AllTheMods11InDev/datagen`, git-ignored there): links every jar from `atm11_pack_dir/mods`, and
-   replaces `config`, `defaultconfigs`, `kubejs` with fresh copies. The pack folder is only read.
-2. The `data` run (`serverData()`) starts the data generator with `--mod reportdump --output <datagen>/generated`
-   and `-Dreportdump.rootsFile=roots.txt` (the data folder names to walk).
+Two data runs (both `serverData()`, `--mod reportdump`, `-Dreportdump.rootsFile=roots.txt`, the data
+folder names to walk):
+- `./gradlew runData`: local, just this mod and its runtime dependencies (NeoForge, KubeJS), game folder
+  `run/`, output `run/generated`. About 5 s; 154 registries, 1,168 blocks, 102 commands (13:18 run).
+- `./gradlew runDataATM11`: the whole All The Mods 11 pack, about 30 s, 6 GB heap max.
+  1. `prepareDataATM11` fills the game folder `atm11_datagen_dir` (gradle.properties, default
+     `../AllTheMods11InDev/datagen`, git-ignored there): links every jar from `atm11_pack_dir/mods`, and
+     replaces `config`, `defaultconfigs`, `kubejs` with fresh copies. The pack folder is only read.
+  2. Output in `<datagen>/generated`.
 
 `mods.toml` is generated from `src/main/templates` with the values in `gradle.properties`.
 
 KubeJS is an optional dependency, built against the latest (`kubejs_version`, 26.1.2-8.0.7):
-`compileOnly` in Gradle (not published; `localRuntime` is commented out, so runData uses the pack's
-8.0.6), `type = "optional"` with `versionRange = "[26.1.2-8,)"` in `mods.toml` (an installed optional
-dependency must be in range; this accepts the pack's 8.0.6). Tested 13:06–13:07: runData with 8.0.6,
-and the built jar alone on NeoForge 26.1.2.109 with no KubeJS (loads; 154 registries, vanilla + NeoForge data).
+- `mods.toml`: `type = "optional"`, `versionRange = "[26.1.2-8,)"`. An installed optional dependency must
+  be in range; this accepts the pack's 8.0.6.
+- Gradle: `compileOnly` + `localRuntime` + `interfaceInjectionData`. Not published (the POM has no
+  dependencies), but on every run's classpath: MDG bakes the injected interfaces into the Minecraft jar
+  that runs use too, so a run without KubeJS fails with
+  `NoClassDefFoundError: dev/latvian/mods/kubejs/core/ComponentKJS` (from `MutableComponent`).
+- Both runs load KubeJS 8.0.7; in runDataATM11 FML prefers it over the pack's 8.0.6.
+- Outside Gradle the built jar needs no KubeJS: alone on NeoForge 26.1.2.109 it loads and writes its
+  reports (154 registries, vanilla + NeoForge data; tested 13:07).
 
-**Dev vs production:** `runData` is a dev environment. Some mods add test content there that players
-never see: Titanium test blocks, Generator Galore 64x generators, FancyTabSections placeholder items,
-commands `chisel`, `ftbchunks_dev`, `newFamily`; Mystical Agriculture and Generator Galore then load
-54 more files. A production run (the pack's own NeoForge .109, `net.neoforged.fml.startup.DataServer`,
-the built jar in its mods) gave 31,833 blocks / 233 commands / 4,195 skipped files instead of
-31,844 / 236 / 4,141; everything else was identical.
+**Dev vs production:** both runs are dev environments. With All The Mods 11 (runDataATM11) some mods add
+test content that players never see: Titanium test blocks, Generator Galore 64x generators,
+FancyTabSections placeholder items, commands `chisel`, `ftbchunks_dev`, `newFamily`; Mystical
+Agriculture and Generator Galore then load 54 more files. A production run (the pack's own NeoForge
+.109 and KubeJS 8.0.6, `net.neoforged.fml.startup.DataServer`, the built jar in its mods) gave
+31,833 blocks / 233 commands / 4,195 skipped files instead of 31,844 / 236 / 4,141; everything else
+was identical. Dev mode is fine for this project; there is no production-mode task.
 
 ## The mod (`src/main/java/io/codetoil/reportdump/neo`)
 

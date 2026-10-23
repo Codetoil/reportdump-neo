@@ -45,24 +45,15 @@ neoForge {
     version = project.neo_version
 
     runs {
-        client {
-            client()
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        }
-
-        server {
-            server()
-            programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        }
-
-        gameTestServer {
-            type = "gameTestServer"
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        }
-
-        // Data generator with the whole All The Mods 11 pack loaded; output in <atm11_datagen_dir>/generated.
+        // runData: data generator with just this mod (and its runtime dependencies); output in run/generated.
         data {
+            serverData()
+            programArguments.addAll '--mod', project.mod_id, '--output', file('run/generated').absolutePath
+            systemProperty 'reportdump.rootsFile', file('roots.txt').absolutePath
+        }
+
+        // runDataATM11: the same with the whole All The Mods 11 pack loaded; output in <atm11_datagen_dir>/generated.
+        dataATM11 {
             serverData()
             gameDirectory = file(project.atm11_datagen_dir)
             programArguments.addAll '--mod', project.mod_id, '--output', file("${project.atm11_datagen_dir}/generated").absolutePath
@@ -89,8 +80,9 @@ configurations {
 }
 
 dependencies {
-	// KubeJS is optional: compile against it but don't publish a dependency on it or use it in runs (unless otherwise included in the modpack)
+	// KubeJS is optional: compile against it but don't publish a dependency on it
 	compileOnly("dev.latvian.mods:kubejs-neoforge:$kubejs_version")
+	localRuntime("dev.latvian.mods:kubejs-neoforge:$kubejs_version")
 	interfaceInjectionData("dev.latvian.mods:kubejs-neoforge:$kubejs_version")
 }
 
@@ -113,10 +105,10 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
 sourceSets.main.resources.srcDir generateModMetadata
 neoForge.ideSyncTask generateModMetadata
 
-// Fills the runData game folder from the pack without ever writing to the pack: links each mod jar,
+// Fills the runDataATM11 game folder from the pack without ever writing to the pack: links each mod jar,
 // and replaces config, defaultconfigs and kubejs with fresh copies (configs get rewritten on load).
-var prepareDatagenRun = tasks.register("prepareDatagenRun") {
-    description = 'Sets up the All The Mods 11 game folder for runData.'
+var prepareDataATM11 = tasks.register("prepareDataATM11") {
+    description = 'Sets up the All The Mods 11 game folder for runDataATM11.'
     var pack = file(project.atm11_pack_dir).toPath()
     var work = file(project.atm11_datagen_dir).toPath()
     doLast {
@@ -138,8 +130,8 @@ var prepareDatagenRun = tasks.register("prepareDatagenRun") {
         }
     }
 }
-tasks.matching { it.name == 'runData' }.configureEach {
-    dependsOn prepareDatagenRun
+tasks.matching { it.name == 'runDataATM11' }.configureEach {
+    dependsOn prepareDataATM11
 }
 
 publishing {
