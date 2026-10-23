@@ -56,6 +56,7 @@ was identical. Dev mode is fine for this project; there is no production-mode ta
 - `FullRegistries`: registries as `WorldLoader` loads them: static tags → data-driven registries
   (`DataPackRegistriesHooks.getDataPackRegistries()`, incl. modded) → dimensions; then binds static tags.
 - `SafeBlockList`, `SafeComponents`: vanilla's block and item-component reports with per-entry guards.
+- `MapColorsReport`: each block state's in-game map color, for map renderers (see below).
 - `DataRegistriesReport`, `EffectiveData`: see below. The other reports are vanilla's.
 
 ## Output (`<datagen>/generated`, ~1.1 GB)
@@ -64,6 +65,7 @@ was identical. Dev mode is fine for this project; there is no production-mode ta
 |---|---|
 | `reports/registries.json` | 224 static registries (95 vanilla); 38k items, 31,844 blocks, 799 entity types |
 | `reports/blocks.json` | all block states (vanilla part identical to the vanilla report); `blocks_problems.json`: blocks without `definition` (mod never registered a block codec) |
+| `reports/map_colors.json` | `{"<block>": {"color": "#rrggbb" or "none", "states": {"axis=x": …}}}`: `MapColor.col` of the default state, plus states that differ (properties sorted by name). 15:28 run: 31,851 blocks, 5,645 `none` (maps look through them; also modded blocks that never set a map color, e.g. Mystical Agriculture and Allthemodium ores), 483 with state colors; `map_colors_problems.json` lists blocks whose `getMapColor` throws (none) |
 | `reports/<ns>/components/item/*.json` | default item components; `components_problems.json`: 41 items with invalid defaults |
 | `reports/commands.json` | 236 top-level commands |
 | `reports/data_registries.json` | 119 data-driven registries: ids + resolved tags (288 biomes, 2,150 placed features, 252 structures, 415 biome modifiers, 14 dimension entries) |

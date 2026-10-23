@@ -93,6 +93,7 @@ public final class ReportDump {
 
         add(event, new RegistryDumpReport(out));
         add(event, new SafeBlockList(out, lookup));
+        add(event, new MapColorsReport(out));
         add(event, new SafeComponents(out, lookup));
         add(event, new CommandsReport(out, lookup));
         add(event, new BiomeParametersDumpReport(out, lookup));
