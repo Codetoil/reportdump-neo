@@ -20,7 +20,7 @@ sourceSets.main.resources {
 
 repositories {
     maven {
-        url "https://maven.latvian.dev/releases"
+        url = "https://maven.latvian.dev/releases"
         content {
             includeGroup "dev.latvian.mods"
             includeGroup "dev.latvian.apps"
@@ -28,7 +28,7 @@ repositories {
     }
 
     maven {
-        url 'https://jitpack.io'
+        url = 'https://jitpack.io'
         content {
             includeGroup "com.github.rtyley"
         }
@@ -142,7 +142,7 @@ publishing {
     }
     repositories {
         maven {
-            url "file://${project.projectDir}/repo"
+            url = "file://${project.projectDir}/repo"
         }
     }
 }
