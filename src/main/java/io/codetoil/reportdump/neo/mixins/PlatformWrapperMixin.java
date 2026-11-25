@@ -10,7 +10,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * KubeJS skips its startup and server scripts during data generation (ScriptManager.load and
  * KubeJS's constructor check this). Reportdump wants what a server gets: script-registered items
  * and blocks, and script changes to tags, recipes and data. This also turns on KubeJS's console
- * log files and its background log-flushing thread, as on a server.
+ * log files and its background log-flushing thread, as on a server. KubeGroovyPlatformWrapperMixin
+ * does the same for KubeGroovy.
  */
 @Mixin(PlatformWrapper.class)
 public abstract class PlatformWrapperMixin {

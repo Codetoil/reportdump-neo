@@ -2,6 +2,7 @@ package io.codetoil.reportdump.neo;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
@@ -30,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * Runs Minecraft's own data reports with every installed mod loaded, so the registries, block
  * states, item components and command tree include modded content. Also dumps the effective
  * server data files (see {@link EffectiveData}) and what the server's data reload made of them
- * (see {@link LoadedData}). With KubeJS installed, its packs and server scripts take part.
+ * (see {@link LoadedData}). With KubeJS or KubeGroovy installed, its packs and server scripts take part.
  *
  * Run with {@code ./gradlew runData} (see build.gradle), or in a production pack through the
  * {@code net.neoforged.fml.startup.DataServer} entry point with {@code --mod reportdump --output <dir>}.
@@ -54,19 +55,20 @@ public final class ReportDump {
         } catch (RuntimeException e) {
             LOGGER.error("Couldn't load common configs", e);
         }
-        // With KubeJS, read the data the way a KubeJS server does: its packs added and its server
-        // scripts loaded, so script changes to tags, registries and recipes take effect below.
-        boolean kubejs = ModList.get().isLoaded("kubejs");
+        // With KubeJS or KubeGroovy, read the data the way such a server does: their packs added and
+        // server scripts loaded, so script changes to tags, registries and recipes take effect below.
         ResourceManager resources = data;
-        if (kubejs) {
+        Consumer<RegistryAccess.Frozen> loadingContext = access -> {};
+        ScriptMod scripts = ScriptMod.installed();
+        if (scripts != null) {
             try {
-                resources = KubeJSCompat.bindServerResources(data);
-                LOGGER.info("Added KubeJS's data packs and loaded its server scripts");
-            } catch (RuntimeException e) {
-                LOGGER.error("Couldn't load KubeJS's server data; KubeJS changes won't be included", e);
+                resources = scripts.bindServerResources().apply(data);
+                loadingContext = scripts.setRegistryAccess();
+                LOGGER.info("Added {}'s data packs and loaded its server scripts", scripts.name());
+            } catch (RuntimeException | LinkageError e) {
+                LOGGER.error("Couldn't load {}'s server data; its changes won't be included", scripts.name(), e);
             }
         }
-        Consumer<RegistryAccess.Frozen> loadingContext = kubejs ? KubeJSCompat::setRegistryAccess : access -> {};
 
         // The generator's own lookup only has vanilla's data-driven registries; load the modded ones.
         FullRegistries full = null;
@@ -78,7 +80,7 @@ public final class ReportDump {
         }
         CompletableFuture<HolderLookup.Provider> lookup = full != null ? CompletableFuture.completedFuture(full.lookup()) : event.getLookupProvider();
 
-        // Then the server's data reload (recipes, loot, advancements; KubeJS recipe events). It also
+        // Then the server's data reload (recipes, loot, advancements; script recipe events). It also
         // applies the static tags and item components, so the reports below see them as a server would.
         ReloadableServerResources loaded = null;
         if (full != null) {
@@ -107,6 +109,25 @@ public final class ReportDump {
             add(event, new LoadedData(out, loaded, resources));
         }
         add(event, new EffectiveData(out, resources, full));
+    }
+
+    /**
+     * The installed script mod whose packs and server scripts take part: KubeJS, or its Groovy fork
+     * KubeGroovy (which declares itself incompatible with KubeJS, so at most one is installed).
+     */
+    private record ScriptMod(String name, UnaryOperator<ResourceManager> bindServerResources,
+                             Consumer<RegistryAccess.Frozen> setRegistryAccess) {
+        /** The installed script mod, or null. The compat class of a mod that isn't installed is never loaded. */
+        static ScriptMod installed() {
+            ModList mods = ModList.get();
+            if (mods.isLoaded("kubejs")) {
+                return new ScriptMod("KubeJS", KubeJSCompat::bindServerResources, KubeJSCompat::setRegistryAccess);
+            }
+            if (mods.isLoaded("kubegroovy")) {
+                return new ScriptMod("KubeGroovy", KubeGroovyCompat::bindServerResources, KubeGroovyCompat::setRegistryAccess);
+            }
+            return null;
+        }
     }
 
     /** Adds a provider whose failure is logged instead of aborting the other reports. */

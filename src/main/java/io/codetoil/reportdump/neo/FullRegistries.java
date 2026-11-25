@@ -36,18 +36,20 @@ record FullRegistries(HolderLookup.Provider lookup, RegistryAccess.Frozen access
                       LayeredRegistryAccess<RegistryLayer> layers, List<Registry.PendingTags<?>> staticTags) {
     /**
      * @param loadingContext told which registries data is being loaded against, at the points where
-     *                       KubeJS's WorldLoaderMixin records them for its scripts
+     *                       KubeJS's (and KubeGroovy's) WorldLoaderMixin records them for its scripts
      */
     static FullRegistries load(ResourceManager resources, Consumer<RegistryAccess.Frozen> loadingContext) {
         Executor executor = Util.backgroundExecutor();
         LayeredRegistryAccess<RegistryLayer> layers = RegistryLayer.createRegistryAccess();
         List<Registry.PendingTags<?>> staticTags = TagLoader.loadTagsForExistingRegistries(resources, layers.getLayer(RegistryLayer.STATIC));
+        // As in WorldLoader, both loads get the static tags: NeoForge evaluates neoforge:conditions in
+        // data-driven registry files (tag_empty and the like) against them.
         RegistryAccess.Frozen worldgenLoadContext = layers.getAccessForLoading(RegistryLayer.WORLDGEN);
         loadingContext.accept(worldgenLoadContext);
         List<HolderLookup.RegistryLookup<?>> staticLookups = TagLoader.buildUpdatedLookups(worldgenLoadContext, staticTags);
-        RegistryAccess.Frozen worldgen = RegistryDataLoader.load(resources, staticLookups, DataPackRegistriesHooks.getDataPackRegistries(), executor).join();
+        RegistryAccess.Frozen worldgen = RegistryDataLoader.load(resources, staticLookups, DataPackRegistriesHooks.getDataPackRegistries(), executor, staticTags).join();
         List<HolderLookup.RegistryLookup<?>> withWorldgen = Stream.concat(staticLookups.stream(), worldgen.listRegistries()).toList();
-        RegistryAccess.Frozen dimensions = RegistryDataLoader.load(resources, withWorldgen, RegistryDataLoader.DIMENSION_REGISTRIES, executor).join();
+        RegistryAccess.Frozen dimensions = RegistryDataLoader.load(resources, withWorldgen, RegistryDataLoader.DIMENSION_REGISTRIES, executor, staticTags).join();
 
         layers = layers.replaceFrom(RegistryLayer.WORLDGEN, worldgen, dimensions);
         RegistryAccess.Frozen access = layers.compositeAccess();
@@ -60,8 +62,8 @@ record FullRegistries(HolderLookup.Provider lookup, RegistryAccess.Frozen access
 
     /**
      * The server's first data reload, as WorldLoader runs it after the registries: recipes, loot
-     * tables, advancements, functions and every mod's reload listener (KubeJS's recipe events run
-     * here), then the static registries' tags and item components are applied. Settings are a
+     * tables, advancements, functions and every mod's reload listener (KubeJS's or KubeGroovy's recipe
+     * events run here), then the static registries' tags and item components are applied. Settings are a
      * dedicated server's defaults.
      */
     ReloadableServerResources loadServerResources(ResourceManager resources) {

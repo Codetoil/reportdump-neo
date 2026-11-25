@@ -4,7 +4,8 @@
   "compatibilityLevel": "JAVA_25",
   "plugin": "io.codetoil.reportdump.neo.ReportDumpMixinPlugin",
   "mixins": [
-    "PlatformWrapperMixin"
+    "PlatformWrapperMixin",
+    "KubeGroovyPlatformWrapperMixin"
   ],
   "injectors": {
     "defaultRequire": 1
