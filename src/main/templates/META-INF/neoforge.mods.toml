@@ -18,7 +18,7 @@ versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "BOTH"
 
-# Built against NeoForge ${neo_version}; any 26.1.2 build works (All The Mods 11 runs 26.1.2.109).
+# Built against NeoForge ${neo_version}, the build All The Mods 11 0.15.0-beta runs; accepts any 26.1.2 build.
 [[dependencies.${mod_id}]]
 modId = "neoforge"
 type = "required"
@@ -27,10 +27,19 @@ ordering = "NONE"
 side = "BOTH"
 
 # Optional, but if installed it must be in range. Built against ${kubejs_version}; accept any KubeJS 8
-# or newer, so packs on an older 8.x (All The Mods 11 ships 26.1.2-8.0.6) still load this mod.
+# or newer, so packs on an older 8.x (an earlier All The Mods 11 build shipped 26.1.2-8.0.6) still load this mod.
 [[dependencies.${mod_id}]]
 modId = "kubejs"
 type = "optional"
 versionRange = "[26.1.2-8,)"
+ordering = "AFTER"
+side = "BOTH"
+
+# KubeGroovy, the Groovy fork of KubeJS (All The Mods 11 0.15.0-beta ships 1.0.2), is used the same way
+# through method handles, so there is no build dependency on it. Accept any KubeGroovy 1 or newer.
+[[dependencies.${mod_id}]]
+modId = "kubegroovy"
+type = "optional"
+versionRange = "[1,)"
 ordering = "AFTER"
 side = "BOTH"

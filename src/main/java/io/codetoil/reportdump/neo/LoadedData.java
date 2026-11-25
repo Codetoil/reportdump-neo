@@ -33,13 +33,13 @@ import net.minecraft.world.level.storage.loot.Validatable;
 
 /**
  * What the server ended up with after its data reload, including changes made in code (KubeJS
- * scripts, mods' reload listeners), re-encoded as data-pack JSON in loaded/data/: recipes, loot
+ * or KubeGroovy scripts, mods' reload listeners), re-encoded as data-pack JSON in loaded/data/: recipes, loot
  * tables, predicates, item modifiers, advancements.
  *
  * reports/loaded_data.json compares those ids with the data files: ids added in code, files that
  * didn't load (removed by scripts, conditions not met, parse errors) and elements that couldn't be
- * encoded back to JSON. It doesn't flag changed contents; KubeJS logs its recipe changes in
- * logs/kubejs/server.log.
+ * encoded back to JSON. It doesn't flag changed contents; KubeJS and KubeGroovy log their recipe
+ * changes in logs/kubejs/server.log and logs/kubegroovy/server.log.
  */
 final class LoadedData implements DataProvider {
     private final PackOutput output;

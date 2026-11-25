@@ -45,7 +45,7 @@ neoForge {
     version = project.neo_version
 
     runs {
-        // runData: data generator with just this mod (and its runtime dependencies); output in run/generated.
+        // runData: data generator with just this mod (KubeJS too with -Pwith_kubejs, see dependencies); output in run/generated.
         data {
             serverData()
             programArguments.addAll '--mod', project.mod_id, '--output', file('run/generated').absolutePath
@@ -53,6 +53,7 @@ neoForge {
         }
 
         // runDataATM11: the same with the whole All The Mods 11 pack loaded; output in <atm11_datagen_dir>/generated.
+        // Its script mod (KubeGroovy from 0.15.0-beta on, KubeJS before) comes from the pack.
         dataATM11 {
             serverData()
             gameDirectory = file(project.atm11_datagen_dir)
@@ -80,10 +81,16 @@ configurations {
 }
 
 dependencies {
-	// KubeJS is optional: compile against it but don't publish a dependency on it
+	// KubeJS is optional: compile against it but don't publish a dependency on it. Runs don't load it by
+	// default: KubeGroovy, All The Mods 11's script mod from 0.15.0-beta on, is incompatible with it, and
+	// runDataATM11 gets the pack's own script mod from the pack's mods. `-Pwith_kubejs` puts KubeJS on every
+	// run's classpath, to test KubeJSCompat with runData. No interface injection: it would bake KubeJS's
+	// interfaces into the Minecraft jar the runs use, so runs without KubeJS would fail with
+	// NoClassDefFoundError: dev/latvian/mods/kubejs/core/ComponentKJS.
 	compileOnly("dev.latvian.mods:kubejs-neoforge:$kubejs_version")
-	localRuntime("dev.latvian.mods:kubejs-neoforge:$kubejs_version")
-	interfaceInjectionData("dev.latvian.mods:kubejs-neoforge:$kubejs_version")
+	if (project.hasProperty('with_kubejs')) {
+		localRuntime("dev.latvian.mods:kubejs-neoforge:$kubejs_version")
+	}
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
@@ -106,7 +113,8 @@ sourceSets.main.resources.srcDir generateModMetadata
 neoForge.ideSyncTask generateModMetadata
 
 // Fills the runDataATM11 game folder from the pack without ever writing to the pack: links each mod jar,
-// and replaces config, defaultconfigs and kubejs with fresh copies (configs get rewritten on load).
+// and replaces config, defaultconfigs, the script mod's folder (kubegroovy or kubejs) and local (its dev
+// settings) with fresh copies (configs get rewritten on load). A folder the pack lacks is removed here too.
 var prepareDataATM11 = tasks.register("prepareDataATM11") {
     description = 'Sets up the All The Mods 11 game folder for runDataATM11.'
     var pack = file(project.atm11_pack_dir).toPath()
@@ -118,11 +126,14 @@ var prepareDataATM11 = tasks.register("prepareDataATM11") {
         pack.resolve('mods').toFile().listFiles().findAll { it.name.endsWith('.jar') }.each {
             java.nio.file.Files.createSymbolicLink(mods.resolve(it.name), it.toPath())
         }
-        ['config', 'defaultconfigs', 'kubejs'].each { name ->
+        ['config', 'defaultconfigs', 'kubejs', 'kubegroovy', 'local'].each { name ->
             var from = pack.resolve(name)
             var to = work.resolve(name)
             if (java.nio.file.Files.exists(to)) {
                 to.toFile().deleteDir()
+            }
+            if (!java.nio.file.Files.isDirectory(from)) {
+                return
             }
             java.nio.file.Files.walk(from).withCloseable { paths ->
                 paths.each { java.nio.file.Files.copy(it, to.resolve(from.relativize(it).toString())) }

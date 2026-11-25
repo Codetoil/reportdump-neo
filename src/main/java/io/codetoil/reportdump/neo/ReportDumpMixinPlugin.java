@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.service.MixinService;
 
 /**
- * Applies a mixin only when its target class exists, so mixins into optional mods (KubeJS) are
+ * Applies a mixin only when its target class exists, so mixins into optional mods (KubeJS, KubeGroovy) are
  * skipped instead of failing the required mixin config when the mod isn't installed.
  */
 public final class ReportDumpMixinPlugin implements IMixinConfigPlugin {
